@@ -3,6 +3,9 @@
 **Componentes**: [Leonardo Castro](https://github.com/thetwelvedev), [Arthur Ramos](https://github.com/ArthurRamos26) e [Lucas Gabriel](https://github.com/lucasrocha777)
 
 ## Sumário
+<!--
+fazer sumário
+-->
 
 ## Hands-on intermediário
 
@@ -13,30 +16,39 @@
 
 
 ## Organograma
-![organograma](./)
+![organograma](./imagens/organograma.png)
 
 ## Projeto Montado
-![circuito]()
+![circuito](./imagens/circuito-montado.jpg)
 
 ## Documentos
 
 #### Big Picture
-![big picture](./)
+![big picture](./imagens/Big%20Picture.png)
 
 #### Plano de Teste
-[Acesse aqui](./)
-
-#### Diagrama Esquemático das Conexões e componentes do projeto
-[Acesse aqui](./)
+[Acesse aqui](./docs/Plano_de_testes_arkham.pdf)
 
 #### Documento de Definição de Pronto(DoD)
-[Acesse aqui](./)
+[Acesse aqui](./docs/Definição%20de%20Pronto%20Arkham.pdf)
 
 #### Documento de Requesitos Funcionais
-[Acesse aqui](./)
+[Acesse aqui](./docs/Requisitos_Funcionais_Arkham.pdf)
 
+#### Documento de Progresso
+[Acesse aqui](./docs/Documento%20de%20progresso_Arkham.pdf)
+
+<!--
 #### Slide do Pitch
 [Acesse aqui](./)
+
+
+#### Esqeuema de Conexões
+[Acesse aqui](./imagens/)
+
+##### Pinagem
+
+-->
 
 ## Código do Circuito
 ```C
