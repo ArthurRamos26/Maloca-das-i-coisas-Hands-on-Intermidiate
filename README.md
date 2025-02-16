@@ -61,12 +61,12 @@ fazer sumário
 #include <PubSubClient.h>
 
 // Definições de WiFi
-#define WIFI_SSID "CIT_Alunos"
-#define WIFI_PASSWORD "alunos@2024"
+#define WIFI_SSID "complete com seus dados"
+#define WIFI_PASSWORD "complete com seus dados"
 
 // Definições do Firebase
-#define FIREBASE_HOST "https://monitoramento-paciente-de-risc-default-rtdb.firebaseio.com"
-#define FIREBASE_AUTH "AIzaSyAJWmYY8QnFBBBGweShQCN-Kjfgg7GaJ2M"
+#define FIREBASE_HOST "complete com seus dados"
+#define FIREBASE_AUTH "complete com seus dados"
 
 // Definições do MQTT
 #define MQTT_SERVER "broker.hivemq.com"
