@@ -83,12 +83,13 @@ fazer sumário
 #define MPU_SDA 22
 
 // Configuração Wi-Fi
-#define WIFI_SSID "SEU_SSID"
-#define WIFI_PASSWORD "SUA_SENHA"
+#define WIFI_SSID "nome_do_wifi"
+#define WIFI_PASSWORD "senha_do_wifi"
 
 // Configuração Firebase
-#define API_KEY "SUA_API_KEY"
-#define DATABASE_URL "SUA_DATABASE_URL"
+#define API_KEY "api_do_seu_firebase"
+#define DATABASE_URL "url_da_api"
+
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
@@ -102,12 +103,6 @@ PubSubClient client(espClient);
 // Inicialização dos sensores
 DHT dht(DHTPIN, DHTTYPE);
 MPU6050 mpu;
-
-// Definir o número de amostras para a média
-#define NUM_SAMPLES 100
-
-// Variáveis de média
-int16_t ax_avg = 0, ay_avg = 0, az_avg = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -139,13 +134,9 @@ void loop() {
 
   Serial.printf("Temp: %.2fC, Umidade: %.2f%%, AX: %d, AY: %d, AZ: %d\n", temperature, humidity, ax, ay, az);
 
-  ax_avg = (ax_avg * (NUM_SAMPLES - 1) + ax) / NUM_SAMPLES;
-  ay_avg = (ay_avg * (NUM_SAMPLES - 1) + ay) / NUM_SAMPLES;
-  az_avg = (az_avg * (NUM_SAMPLES - 1) + az) / NUM_SAMPLES;
-
   bool alerta = false;
-  if (temperature < 20 || temperature > 30 || humidity < 40 || 
-      abs(ax - ax_avg) > 1000 || abs(ay - ay_avg) > 1000 || abs(az - az_avg) > 1000) {
+  // Verifica se a temperatura, umidade ou variação do movimento lateral (eixos X e Y) ultrapassam os limites
+  if (temperature < 20 || temperature > 30 || humidity < 40 || ax < 14000 || ax < 6000 || ax < 7000) {
     acionarAlerta();
     alerta = true;
   }
@@ -196,9 +187,9 @@ void acionarAlerta() {
 }
 
 void enviarFirebase(float temp, float umid, bool alerta) {
-  Firebase.setFloat(fbdo, "/monitoramento/temperatura", temp);
-  Firebase.setFloat(fbdo, "/monitoramento/umidade", umid);
-  Firebase.setBool(fbdo, "/monitoramento/alerta", alerta);
+  Firebase.RTDB.setFloat(&fbdo, "/monitoramento/temperatura", temp);
+  Firebase.RTDB.setFloat(&fbdo, "/monitoramento/umidade", umid);
+  Firebase.RTDB.setBool(&fbdo, "/monitoramento/alerta", alerta);
 }
 
 void publicarMQTT(float temp, float umid, bool alerta) {
@@ -206,4 +197,5 @@ void publicarMQTT(float temp, float umid, bool alerta) {
   snprintf(mensagem, sizeof(mensagem), "{\"temperatura\":%.2f, \"umidade\":%.2f, \"alerta\":%d}", temp, umid, alerta);
   client.publish("esp32/monitoramento", mensagem);
 }
+
 ```
