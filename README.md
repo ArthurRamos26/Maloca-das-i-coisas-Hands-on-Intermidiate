@@ -12,6 +12,7 @@ fazer sumário
 - [x] Sprint 0
 - [x] Sprint 1
 - [ ] Sprint 2
+- [ ] Sprint 3
 - [ ] Pitch do projeto
 
 
@@ -23,55 +24,55 @@ fazer sumário
 
 ## Documentos
 
-#### Big Picture
+### Big Picture
 ![big picture](./imagens/Big%20Picture.png)
 
-#### Plano de Teste
+### Plano de Teste
 [Acesse aqui](./docs/Plano_de_testes_arkham.pdf)
 
-#### Documento de Definição de Pronto(DoD)
+### Documento de Definição de Pronto(DoD)
 [Acesse aqui](./docs/Definição%20de%20Pronto%20Arkham.pdf)
 
-#### Documento de Requesitos Funcionais
+### Documento de Requesitos Funcionais
 [Acesse aqui](./docs/Requisitos_Funcionais_Arkham.pdf)
 
-#### Documento de Progresso
+### Documento de Progresso
 [Acesse aqui](./docs/Documento%20de%20progresso_Arkham.pdf)
 
 <!--
-#### Slide do Pitch
+### Slide do Pitch
 [Acesse aqui](./)
 
 
-#### Esqeuema de Conexões
+### Esquema de Conexões
 [Acesse aqui](./imagens/)
-
-##### Pinagem
-
 -->
+
+#### Pinagem
+
+| **Componente**                         | **Pino ESP32** | **Descrição**               |
+|----------------------------------------|--------------|---------------------------|
+| **DHT11 (Sensor de Temperatura e Umidade)** | 15           | Pino de dados do DHT11    |
+| **MPU6050 (Acelerômetro e Giroscópio)** | 21 (SCL)     | Clock do I2C              |
+| **MPU6050 (Acelerômetro e Giroscópio)** | 22 (SDA)     | Dados do I2C              |
+| **LED de Alerta**                       | 23           | Saída para LED de alerta   |
+| **Buzzer de Alerta**                    | 18           | Saída para buzzer          |
+
+## Esquema de Ligação
+
+- O **DHT11** precisa de um resistor **pull-up de 10kΩ** entre o pino de dados (15) e o **VCC (3.3V)**.
+- O **MPU6050** se comunica via **I2C** utilizando os pinos **SCL (21)** e **SDA (22)**.
+- O **LED e o Buzzer** são acionados pelos pinos **23 e 18**, respectivamente.
+
 
 ## Código do Circuito
 ```C
 #include <WiFi.h>
-#include <FirebaseESP32.h>
-#include <Wire.h>
-#include <Adafruit_MPU6050.h>
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
+#include <Firebase_ESP_Client.h>
 #include <PubSubClient.h>
-
-// Definições de WiFi
-#define WIFI_SSID "complete com seus dados"
-#define WIFI_PASSWORD "complete com seus dados"
-
-// Definições do Firebase
-#define FIREBASE_HOST "complete com seus dados"
-#define FIREBASE_AUTH "complete com seus dados"
-
-// Definições do MQTT
-#define MQTT_SERVER "broker.hivemq.com"
-#define MQTT_PORT 1883
-#define MQTT_TOPIC "monitoramento/alertas"
+#include <Wire.h>
+#include <MPU6050.h>
+#include <DHT.h>
 
 // Definições de sensores e atuadores
 #define DHTPIN 15
@@ -81,94 +82,128 @@ fazer sumário
 #define MPU_SCL 21
 #define MPU_SDA 22
 
+// Configuração Wi-Fi
+#define WIFI_SSID "SEU_SSID"
+#define WIFI_PASSWORD "SUA_SENHA"
+
+// Configuração Firebase
+#define API_KEY "SUA_API_KEY"
+#define DATABASE_URL "SUA_DATABASE_URL"
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+// Configuração MQTT
+#define MQTT_SERVER "broker.hivemq.com"
+#define MQTT_PORT 1883
 WiFiClient espClient;
 PubSubClient client(espClient);
-FirebaseData firebaseData;
-DHT dht(DHTPIN, DHTTYPE);
-Adafruit_MPU6050 mpu;
 
-FirebaseConfig firebaseConfig;
-FirebaseAuth firebaseAuth;
+// Inicialização dos sensores
+DHT dht(DHTPIN, DHTTYPE);
+MPU6050 mpu;
+
+// Definir o número de amostras para a média
+#define NUM_SAMPLES 100
+
+// Variáveis de média
+int16_t ax_avg = 0, ay_avg = 0, az_avg = 0;
 
 void setup() {
-    Serial.begin(115200);
-    
-    // Conectar ao WiFi
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.println("Conectando ao WiFi...");
-    }
-    Serial.println("WiFi conectado");
+  Serial.begin(115200);
 
-    // Configurar Firebase
-    firebaseConfig.host = FIREBASE_HOST;
-    firebaseConfig.signer.tokens.legacy_token = FIREBASE_AUTH;
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
 
-    // Inicializar Firebase
-    Firebase.begin(&firebaseConfig, &firebaseAuth);
-    Firebase.reconnectWiFi(true);
+  dht.begin();
+  Wire.begin(MPU_SDA, MPU_SCL);
+  mpu.initialize();
 
-    // Configurar MQTT
-    client.setServer(MQTT_SERVER, MQTT_PORT);
-    conectarMQTT();
-    
-    // Inicializar sensores
-    dht.begin();
-    Wire.begin(MPU_SDA, MPU_SCL);
-    if (!mpu.begin()) {
-        Serial.println("Falha ao iniciar MPU6050");
-        while (1);
-    }
+  if (!mpu.testConnection()) {
+    Serial.println("Erro de conexão com o MPU6050");
+    while (1);
+  }
 
-    // Configurar pinos
-    pinMode(LED_PIN, OUTPUT);
-    pinMode(BUZZER_PIN, OUTPUT);
-}
-
-void conectarMQTT() {
-    while (!client.connected()) {
-        Serial.println("Conectando ao MQTT...");
-        if (client.connect("ESP32Client")) {
-            Serial.println("Conectado ao MQTT");
-        } else {
-            Serial.print("Falha, rc=");
-            Serial.print(client.state());
-            Serial.println(" Tentando novamente...");
-            delay(5000);
-        }
-    }
+  conectarWiFi();
+  configurarFirebase();
+  configurarMQTT();
 }
 
 void loop() {
-    if (!client.connected()) {
-        conectarMQTT();
-    }
-    client.loop();
+  client.loop();
 
-    // Leitura dos sensores
-    float temperatura = dht.readTemperature();
-    float umidade = dht.readHumidity();
-    sensors_event_t a, g, temp;
-    mpu.getEvent(&a, &g, &temp);
-    float angulo = a.acceleration.x;
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  int16_t ax, ay, az;
+  mpu.getAcceleration(&ax, &ay, &az);
 
-    // Enviar dados para o Firebase
-    Firebase.setFloat(firebaseData, "/dados/temperatura", temperatura);
-    Firebase.setFloat(firebaseData, "/dados/umidade", umidade);
-    Firebase.setFloat(firebaseData, "/dados/angulo", angulo);
+  Serial.printf("Temp: %.2fC, Umidade: %.2f%%, AX: %d, AY: %d, AZ: %d\n", temperature, humidity, ax, ay, az);
 
-    // Verificação de alertas
-    if (temperatura > 38 || umidade < 20 || abs(angulo) > 45) {
-        digitalWrite(LED_PIN, HIGH);
-        digitalWrite(BUZZER_PIN, HIGH);
-        client.publish(MQTT_TOPIC, "Alerta: Condição Crítica Detectada!");
-    } else {
-        digitalWrite(LED_PIN, LOW);
-        digitalWrite(BUZZER_PIN, LOW);
-    }
+  ax_avg = (ax_avg * (NUM_SAMPLES - 1) + ax) / NUM_SAMPLES;
+  ay_avg = (ay_avg * (NUM_SAMPLES - 1) + ay) / NUM_SAMPLES;
+  az_avg = (az_avg * (NUM_SAMPLES - 1) + az) / NUM_SAMPLES;
 
-    delay(5000);
+  bool alerta = false;
+  if (temperature < 20 || temperature > 30 || humidity < 40 || 
+      abs(ax - ax_avg) > 1000 || abs(ay - ay_avg) > 1000 || abs(az - az_avg) > 1000) {
+    acionarAlerta();
+    alerta = true;
+  }
+
+  enviarFirebase(temperature, humidity, alerta);
+  publicarMQTT(temperature, humidity, alerta);
+  delay(1000);
 }
 
+void conectarWiFi() {
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Conectando ao WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+  }
+  Serial.println(" Conectado!");
+}
+
+void configurarFirebase() {
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+}
+
+void configurarMQTT() {
+  client.setServer(MQTT_SERVER, MQTT_PORT);
+  while (!client.connected()) {
+    Serial.print("Conectando ao MQTT...");
+    if (client.connect("ESP32Client")) {
+      Serial.println("Conectado!");
+    } else {
+      Serial.print("Falha, rc=");
+      Serial.print(client.state());
+      Serial.println(" Tentando novamente...");
+      delay(2000);
+    }
+  }
+}
+
+void acionarAlerta() {
+  digitalWrite(BUZZER_PIN, HIGH);
+  digitalWrite(LED_PIN, HIGH);
+  delay(2000);
+  digitalWrite(BUZZER_PIN, LOW);
+  digitalWrite(LED_PIN, LOW);
+}
+
+void enviarFirebase(float temp, float umid, bool alerta) {
+  Firebase.setFloat(fbdo, "/monitoramento/temperatura", temp);
+  Firebase.setFloat(fbdo, "/monitoramento/umidade", umid);
+  Firebase.setBool(fbdo, "/monitoramento/alerta", alerta);
+}
+
+void publicarMQTT(float temp, float umid, bool alerta) {
+  char mensagem[100];
+  snprintf(mensagem, sizeof(mensagem), "{\"temperatura\":%.2f, \"umidade\":%.2f, \"alerta\":%d}", temp, umid, alerta);
+  client.publish("esp32/monitoramento", mensagem);
+}
 ```
