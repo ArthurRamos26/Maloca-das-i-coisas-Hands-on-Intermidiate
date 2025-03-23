@@ -11,9 +11,9 @@ fazer sumário
 
 - [x] Sprint 0
 - [x] Sprint 1
-- [ ] Sprint 2
-- [ ] Sprint 3
-- [ ] Pitch do projeto
+- [x]Sprint 2
+- [x] Sprint 3
+- [x] Pitch do projeto
 
 
 ## Organograma
