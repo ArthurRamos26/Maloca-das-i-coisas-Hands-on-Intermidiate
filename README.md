@@ -11,7 +11,7 @@ fazer sumário
 
 - [x] Sprint 0
 - [x] Sprint 1
-- [x]Sprint 2
+- [x] Sprint 2
 - [x] Sprint 3
 - [x] Pitch do projeto
 
